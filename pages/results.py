@@ -16,9 +16,17 @@ if service_file:
     try:
         # Load JSON from uploaded file
         service_info = json.load(service_file)
-        creds = Credentials.from_service_account_info(service_info)
+
+        # Add correct Google API scopes
+        scopes = [
+            "https://www.googleapis.com/auth/spreadsheets",
+            "https://www.googleapis.com/auth/drive.readonly"  # optional if only reading
+        ]
+
+        # Create credentials with scopes
+        creds = Credentials.from_service_account_info(service_info, scopes=scopes)
         gc = gspread.authorize(creds)
-        st.sidebar.success("✅ Authenticated!")
+        st.sidebar.success("✅ Authenticated successfully!")
 
         # ---------------------------
         # Load Google Sheet
