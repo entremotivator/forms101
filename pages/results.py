@@ -6,337 +6,549 @@ from google.oauth2.service_account import Credentials
 import plotly.express as px
 import plotly.graph_objects as go
 
-# ─────────────────────────────────────────
-# PAGE CONFIG
-# ─────────────────────────────────────────
+# ---------------------------
+# Page Config
+# ---------------------------
 st.set_page_config(
     page_title="Sheets Dashboard",
+    page_icon="📊",
     layout="wide",
-    initial_sidebar_state="expanded"
 )
 
-# ─────────────────────────────────────────
-# CUSTOM CSS
-# ─────────────────────────────────────────
+# ---------------------------
+# Custom CSS
+# ---------------------------
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Syne:wght@700&display=swap');
+    /* Hide default streamlit elements */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
 
-html, body, [class*="css"] {
-    font-family: 'Inter', sans-serif;
-    background-color: #0F1117;
-    color: #E8E8E8;
-}
+    /* App background */
+    .stApp {
+        background-color: #F8F9FB;
+    }
 
-/* Sidebar */
-section[data-testid="stSidebar"] {
-    background-color: #161B27 !important;
-    border-right: 1px solid #1E2535;
-}
-section[data-testid="stSidebar"] * {
-    color: #C0C8D8 !important;
-}
-section[data-testid="stSidebar"] .stFileUploader label {
-    color: #8899AA !important;
-}
+    /* Metric cards */
+    [data-testid="metric-container"] {
+        background: #FFFFFF;
+        border: 1px solid #EAECF0;
+        border-radius: 12px;
+        padding: 20px 24px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    [data-testid="metric-container"]:hover {
+        border-color: #D0D5DD;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+        transition: all 0.2s ease;
+    }
+    [data-testid="stMetricLabel"] {
+        font-size: 13px !important;
+        font-weight: 500 !important;
+        color: #667085 !important;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+    [data-testid="stMetricValue"] {
+        font-size: 28px !important;
+        font-weight: 700 !important;
+        color: #101828 !important;
+    }
+    [data-testid="stMetricDelta"] {
+        font-size: 13px !important;
+        font-weight: 500 !important;
+    }
 
-/* Main background */
-.main .block-container {
-    background: #0F1117;
-    padding: 2rem 3rem !important;
-}
+    /* Section headers */
+    .section-header {
+        font-size: 11px;
+        font-weight: 600;
+        color: #98A2B3;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin: 28px 0 12px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #EAECF0;
+    }
 
-/* Metric cards */
-div[data-testid="metric-container"] {
-    background: #161B27;
-    border: 1px solid #1E2535;
-    border-radius: 12px;
-    padding: 1.2rem 1.5rem;
-}
-div[data-testid="metric-container"] label {
-    color: #6B7A99 !important;
-    font-size: 0.75rem !important;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-}
-div[data-testid="metric-container"] [data-testid="stMetricValue"] {
-    color: #FFFFFF !important;
-    font-size: 1.8rem !important;
-    font-weight: 600;
-}
-div[data-testid="metric-container"] [data-testid="stMetricDelta"] {
-    font-size: 0.8rem !important;
-}
+    /* Record cards */
+    .record-card {
+        background: #FFFFFF;
+        border: 1px solid #EAECF0;
+        border-radius: 12px;
+        padding: 16px 18px;
+        margin-bottom: 10px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        transition: all 0.15s ease;
+    }
+    .record-card:hover {
+        border-color: #D0D5DD;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        transform: translateY(-1px);
+    }
+    .record-card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 10px;
+    }
+    .record-name {
+        font-size: 15px;
+        font-weight: 600;
+        color: #101828;
+    }
+    .record-category {
+        font-size: 12px;
+        color: #667085;
+        margin-top: 1px;
+    }
+    .record-amount {
+        font-size: 18px;
+        font-weight: 700;
+        color: #101828;
+        text-align: right;
+    }
+    .record-divider {
+        height: 1px;
+        background: #F2F4F7;
+        margin: 10px 0;
+    }
+    .record-meta {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .record-date {
+        font-size: 12px;
+        color: #98A2B3;
+    }
 
-/* Dataframe */
-.dataframe-container {
-    border: 1px solid #1E2535;
-    border-radius: 12px;
-    overflow: hidden;
-}
+    /* Status pills */
+    .pill {
+        display: inline-block;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 3px 10px;
+        border-radius: 99px;
+    }
+    .pill-completed { background: #ECFDF3; color: #027A48; }
+    .pill-pending   { background: #FFFAEB; color: #B54708; }
+    .pill-cancelled { background: #FEF3F2; color: #B42318; }
+    .pill-default   { background: #F2F4F7; color: #344054; }
 
-/* Download button */
-.stDownloadButton button {
-    background: #2563EB !important;
-    color: white !important;
-    border: none !important;
-    border-radius: 8px !important;
-    font-weight: 500 !important;
-    padding: 0.6rem 1.5rem !important;
-    transition: background 0.2s;
-}
-.stDownloadButton button:hover {
-    background: #1D4ED8 !important;
-}
+    /* Avatar circle */
+    .avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        font-weight: 700;
+        flex-shrink: 0;
+    }
 
-/* Section headers */
-h2 {
-    font-family: 'Syne', sans-serif !important;
-    font-size: 1.1rem !important;
-    color: #FFFFFF !important;
-    letter-spacing: 0.03em;
-    margin-top: 2rem !important;
-    margin-bottom: 1rem !important;
-}
-h1 {
-    font-family: 'Syne', sans-serif !important;
-    color: #FFFFFF !important;
-    font-size: 1.8rem !important;
-}
+    /* Sidebar */
+    section[data-testid="stSidebar"] {
+        background: #FFFFFF;
+        border-right: 1px solid #EAECF0;
+    }
 
-/* Divider */
-hr {
-    border-color: #1E2535 !important;
-}
+    /* Dataframe */
+    [data-testid="stDataFrame"] {
+        border: 1px solid #EAECF0;
+        border-radius: 12px;
+        overflow: hidden;
+    }
 
-/* Multiselect */
-.stMultiSelect [data-baseweb="tag"] {
-    background: #1E3A5F !important;
-    color: #93C5FD !important;
-}
+    /* Download button */
+    .stDownloadButton > button {
+        background: #101828;
+        color: #FFFFFF;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 13px;
+        padding: 10px 20px;
+        width: 100%;
+        transition: background 0.15s ease;
+    }
+    .stDownloadButton > button:hover {
+        background: #1D2939;
+    }
 
-/* Upload area */
-.stFileUploader [data-testid="stFileUploadDropzone"] {
-    background: #161B27 !important;
-    border: 1.5px dashed #2D3A50 !important;
-    border-radius: 10px !important;
-}
+    /* Upload area styling */
+    [data-testid="stFileUploader"] {
+        background: #FFFFFF;
+        border: 1px dashed #D0D5DD;
+        border-radius: 12px;
+        padding: 12px;
+    }
 
-/* Info box */
-.stInfo {
-    background: #0C1A2E !important;
-    border-left: 4px solid #2563EB !important;
-    color: #93C5FD !important;
-    border-radius: 8px !important;
-}
+    /* Plotly charts */
+    .js-plotly-plot {
+        border-radius: 12px;
+    }
 
-/* Success */
-.stSuccess {
-    background: #0A1F14 !important;
-    border-left: 4px solid #22C55E !important;
-    border-radius: 8px !important;
-}
-
-/* Table styling */
-.stDataFrame {
-    border-radius: 12px !important;
-    overflow: hidden;
-}
-
-/* Plotly charts */
-.js-plotly-plot {
-    border-radius: 12px;
-}
+    /* Top bar */
+    .top-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 0 20px;
+        border-bottom: 1px solid #EAECF0;
+        margin-bottom: 24px;
+    }
+    .top-bar-title {
+        font-size: 22px;
+        font-weight: 700;
+        color: #101828;
+    }
+    .top-bar-sub {
+        font-size: 13px;
+        color: #667085;
+        margin-top: 2px;
+    }
+    .live-badge {
+        background: #ECFDF3;
+        color: #027A48;
+        font-size: 12px;
+        font-weight: 600;
+        padding: 4px 12px;
+        border-radius: 99px;
+        border: 1px solid #ABEFC6;
+    }
 </style>
 """, unsafe_allow_html=True)
 
-# ─────────────────────────────────────────
-# SIDEBAR
-# ─────────────────────────────────────────
-with st.sidebar:
-    st.markdown("### 📡 Data Source")
-    service_file = st.file_uploader("Upload Service Account JSON", type=["json"])
-    st.markdown("---")
-    st.markdown(
-        "<small style='color:#4B5A72;'>Connect your Google Service Account to pull live Sheets data.</small>",
-        unsafe_allow_html=True
+
+# ---------------------------
+# Helper: status pill HTML
+# ---------------------------
+def status_pill(status: str) -> str:
+    s = str(status).lower()
+    if s == "completed":
+        cls = "pill-completed"
+    elif s == "pending":
+        cls = "pill-pending"
+    elif s == "cancelled" or s == "canceled":
+        cls = "pill-cancelled"
+    else:
+        cls = "pill-default"
+    return f'<span class="pill {cls}">{status}</span>'
+
+
+# ---------------------------
+# Helper: avatar HTML
+# ---------------------------
+AVATAR_COLORS = [
+    ("#EEF4FF", "#3538CD"), ("#FDF2FA", "#C11574"),
+    ("#F0FDF9", "#107569"), ("#FFFAEB", "#B54708"),
+    ("#EFF8FF", "#1849A9"), ("#FEF3F2", "#B42318"),
+]
+
+def avatar_html(name: str, idx: int) -> str:
+    bg, fg = AVATAR_COLORS[idx % len(AVATAR_COLORS)]
+    initials = "".join(w[0].upper() for w in str(name).split()[:2]) or "?"
+    return (
+        f'<div class="avatar" style="background:{bg};color:{fg};">'
+        f"{initials}</div>"
     )
 
-SHEET_URL = "https://docs.google.com/spreadsheets/d/1gFrgzaV9wA77AfWkhl3bsQk5bjN7NkrB2T1K9idZ3EE/edit#gid=368956829"
 
-PLOTLY_LAYOUT = dict(
-    paper_bgcolor="rgba(0,0,0,0)",
-    plot_bgcolor="#161B27",
-    font=dict(family="Inter", color="#C0C8D8", size=12),
-    margin=dict(l=0, r=0, t=30, b=0),
-    legend=dict(bgcolor="rgba(0,0,0,0)", font=dict(color="#C0C8D8")),
-    xaxis=dict(gridcolor="#1E2535", linecolor="#1E2535", tickfont=dict(color="#6B7A99")),
-    yaxis=dict(gridcolor="#1E2535", linecolor="#1E2535", tickfont=dict(color="#6B7A99")),
-)
+# ---------------------------
+# Helper: record card HTML
+# ---------------------------
+def record_card_html(row: dict, idx: int) -> str:
+    name = row.get("Name", f"Record {idx+1}")
+    category = row.get("Category", "")
+    amount = row.get("Amount", "")
+    date = row.get("Date", "")
+    status = row.get("Status", "")
 
-COLORS = ["#3B82F6", "#22C55E", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899", "#14B8A6"]
+    amount_str = f"${float(amount):,.2f}" if amount != "" else "—"
+    pill = status_pill(status) if status else ""
+    av = avatar_html(name, idx)
 
-# ─────────────────────────────────────────
-# MAIN
-# ─────────────────────────────────────────
-st.title("Live Sheets Dashboard")
+    other_fields = {
+        k: v for k, v in row.items()
+        if k not in ("Name", "Category", "Amount", "Date", "Status")
+    }
+    extras = "".join(
+        f'<div style="display:flex;justify-content:space-between;font-size:12px;color:#667085;margin-top:4px;">'
+        f'<span>{k}</span><span style="color:#344054;font-weight:500;">{v}</span></div>'
+        for k, v in list(other_fields.items())[:3]
+    )
 
-if not service_file:
-    st.info("Upload a Google Service Account JSON in the sidebar to load your data.")
-    st.stop()
+    return f"""
+<div class="record-card">
+  <div class="record-card-header">
+    <div style="display:flex;align-items:center;gap:10px;">
+      {av}
+      <div>
+        <div class="record-name">{name}</div>
+        <div class="record-category">{category}</div>
+      </div>
+    </div>
+    <div>
+      <div class="record-amount">{amount_str}</div>
+    </div>
+  </div>
+  <div class="record-divider"></div>
+  <div class="record-meta">
+    <div class="record-date">{date}</div>
+    {pill}
+  </div>
+  {extras}
+</div>
+"""
 
-# ── AUTH ──────────────────────────────────
-try:
-    service_info = json.load(service_file)
-    scopes = [
-        "https://www.googleapis.com/auth/spreadsheets",
-        "https://www.googleapis.com/auth/drive.readonly"
-    ]
-    creds = Credentials.from_service_account_info(service_info, scopes=scopes)
-    gc = gspread.authorize(creds)
-except Exception as e:
-    st.error(f"Authentication failed: {e}")
-    st.stop()
 
-# ── LOAD DATA ─────────────────────────────
-try:
-    sh = gc.open_by_url(SHEET_URL)
-    worksheet = sh.get_worksheet(0)
-    data = worksheet.get_all_records()
-    df = pd.DataFrame(data)
-    st.sidebar.success("Connected")
-except Exception as e:
-    st.error(f"Could not load sheet: {e}")
-    st.stop()
-
-if df.empty:
-    st.warning("Sheet is empty or has no records.")
-    st.stop()
-
-# ── SIDEBAR FILTERS ───────────────────────
+# ---------------------------
+# Sidebar
+# ---------------------------
 with st.sidebar:
-    st.markdown("### Filters")
-    if "Status" in df.columns:
-        status_opts = df["Status"].dropna().unique().tolist()
-        status_filter = st.multiselect("Status", status_opts, default=status_opts)
-        df = df[df["Status"].isin(status_filter)]
+    st.markdown("### 🔑 Connect Google Sheet")
+    service_file = st.file_uploader("Service Account JSON", type=["json"])
 
-    if "Category" in df.columns:
-        cat_opts = df["Category"].dropna().unique().tolist()
-        cat_filter = st.multiselect("Category", cat_opts, default=cat_opts)
-        df = df[df["Category"].isin(cat_filter)]
+    st.markdown("---")
+    st.markdown("### 📌 Filters")
 
-# ── KPI CARDS ─────────────────────────────
-st.markdown("## Overview")
-cols = st.columns(4)
+    SHEET_URL = "https://docs.google.com/spreadsheets/d/1gFrgzaV9wA77AfWkhl3bsQk5bjN7NkrB2T1K9idZ3EE/edit#gid=368956829"
+    sheet_url_input = st.text_input("Sheet URL", value=SHEET_URL)
 
-with cols[0]:
-    st.metric("Total Records", f"{len(df):,}")
 
-with cols[1]:
-    if "Amount" in df.columns:
-        total = pd.to_numeric(df["Amount"], errors="coerce").sum()
-        st.metric("Total Amount", f"${total:,.2f}")
-    else:
-        st.metric("Columns", len(df.columns))
+# ---------------------------
+# Auth + Load Data
+# ---------------------------
+df = None
 
-with cols[2]:
-    if "Status" in df.columns:
-        completed = df[df["Status"].str.lower() == "completed"].shape[0]
-        pct = (completed / len(df) * 100) if len(df) > 0 else 0
-        st.metric("Completed", f"{completed}", delta=f"{pct:.1f}% of total")
-    else:
-        st.metric("Rows", len(df))
+if service_file:
+    try:
+        service_info = json.load(service_file)
+        scopes = [
+            "https://www.googleapis.com/auth/spreadsheets",
+            "https://www.googleapis.com/auth/drive.readonly",
+        ]
+        creds = Credentials.from_service_account_info(service_info, scopes=scopes)
+        gc = gspread.authorize(creds)
+        st.sidebar.success("✅ Authenticated")
+        sh = gc.open_by_url(sheet_url_input)
+        worksheet = sh.get_worksheet(0)
+        data = worksheet.get_all_records()
+        df = pd.DataFrame(data)
+    except Exception as e:
+        st.sidebar.error(f"Error: {e}")
+        df = None
 
-with cols[3]:
-    if "Amount" in df.columns:
-        avg = pd.to_numeric(df["Amount"], errors="coerce").mean()
-        st.metric("Avg Amount", f"${avg:,.2f}")
-    else:
-        st.metric("Data Source", "Google Sheets")
+# ---------------------------
+# Sidebar filters (once data is loaded)
+# ---------------------------
+if df is not None:
+    with st.sidebar:
+        if "Status" in df.columns:
+            all_statuses = df["Status"].dropna().unique().tolist()
+            status_filter = st.multiselect(
+                "Status", all_statuses, default=all_statuses
+            )
+            df = df[df["Status"].isin(status_filter)]
 
-# ── CHARTS ────────────────────────────────
-has_amount = "Amount" in df.columns
-has_category = "Category" in df.columns
-has_status = "Status" in df.columns
-has_date = "Date" in df.columns
+        if "Category" in df.columns:
+            all_cats = df["Category"].dropna().unique().tolist()
+            cat_filter = st.multiselect(
+                "Category", all_cats, default=all_cats
+            )
+            df = df[df["Category"].isin(cat_filter)]
 
-if has_amount or has_category or has_status:
-    st.markdown("## Insights")
-
-chart_col1, chart_col2 = st.columns(2)
-
-with chart_col1:
-    if has_amount and has_category:
-        df["Amount_num"] = pd.to_numeric(df["Amount"], errors="coerce")
-        grouped = df.groupby("Category")["Amount_num"].sum().reset_index()
-        fig = px.bar(
-            grouped, x="Category", y="Amount_num",
-            color="Category", color_discrete_sequence=COLORS,
-            title="Amount by Category",
+        st.markdown("---")
+        csv_bytes = df.to_csv(index=False).encode("utf-8")
+        st.download_button(
+            "⬇ Download CSV", data=csv_bytes,
+            file_name="dashboard_data.csv", mime="text/csv"
         )
-        fig.update_layout(**PLOTLY_LAYOUT, showlegend=False)
-        fig.update_traces(marker_line_width=0)
-        st.plotly_chart(fig, use_container_width=True)
 
-    elif has_status:
+
+# ---------------------------
+# Main content
+# ---------------------------
+if df is None:
+    # Landing state
+    st.markdown("""
+    <div style="max-width:520px;margin:80px auto;text-align:center;">
+      <div style="font-size:48px;margin-bottom:16px;">📊</div>
+      <h2 style="color:#101828;font-weight:700;margin-bottom:8px;">Google Sheets Dashboard</h2>
+      <p style="color:#667085;font-size:15px;line-height:1.6;">
+        Upload your Google Service Account JSON in the sidebar to connect your spreadsheet
+        and explore your data with beautiful cards, charts, and filters.
+      </p>
+    </div>
+    """, unsafe_allow_html=True)
+    st.stop()
+
+
+# ---------------------------
+# Top bar
+# ---------------------------
+col_title, col_badge = st.columns([6, 1])
+with col_title:
+    st.markdown("""
+    <div class="top-bar-title">📊 Live Dashboard</div>
+    <div class="top-bar-sub">Connected to Google Sheets · Auto-refreshes on reload</div>
+    """, unsafe_allow_html=True)
+with col_badge:
+    st.markdown('<div style="padding-top:8px;"><span class="live-badge">● Live</span></div>', unsafe_allow_html=True)
+
+st.markdown('<div style="height:20px;"></div>', unsafe_allow_html=True)
+
+
+# ---------------------------
+# Metric Cards
+# ---------------------------
+st.markdown('<div class="section-header">Overview</div>', unsafe_allow_html=True)
+
+c1, c2, c3, c4 = st.columns(4)
+
+total_rows = len(df)
+with c1:
+    st.metric("Total Records", total_rows)
+
+if "Amount" in df.columns:
+    df["Amount"] = pd.to_numeric(df["Amount"], errors="coerce").fillna(0)
+    total_amount = df["Amount"].sum()
+    avg_amount = df["Amount"].mean()
+    with c2:
+        st.metric("Total Amount", f"${total_amount:,.0f}")
+    with c4:
+        st.metric("Avg Amount", f"${avg_amount:,.0f}")
+else:
+    with c2:
+        st.metric("Total Amount", "N/A")
+    with c4:
+        st.metric("Avg Amount", "N/A")
+
+if "Status" in df.columns:
+    completed_count = df[df["Status"].str.lower() == "completed"].shape[0]
+    pct = round(completed_count / total_rows * 100) if total_rows else 0
+    with c3:
+        st.metric("Completed", completed_count, delta=f"{pct}% of total")
+else:
+    with c3:
+        st.metric("Completed", "N/A")
+
+
+# ---------------------------
+# Charts
+# ---------------------------
+st.markdown('<div class="section-header">Analytics</div>', unsafe_allow_html=True)
+
+chart_col1, chart_col2 = st.columns([3, 2])
+
+# Bar chart
+with chart_col1:
+    if "Amount" in df.columns and "Category" in df.columns and "Status" in df.columns:
+        fig_bar = px.bar(
+            df, x="Category", y="Amount", color="Status",
+            barmode="group",
+            color_discrete_map={
+                "Completed": "#17B26A",
+                "Pending":   "#F79009",
+                "Cancelled": "#F04438",
+            },
+            template="plotly_white",
+        )
+        fig_bar.update_layout(
+            title=dict(text="Amount by Category & Status", font=dict(size=14, color="#101828"), x=0),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(size=12)),
+            margin=dict(l=0, r=0, t=40, b=0),
+            plot_bgcolor="white",
+            paper_bgcolor="white",
+            font=dict(family="sans-serif", color="#667085"),
+            bargap=0.25,
+            bargroupgap=0.1,
+            xaxis=dict(showgrid=False, linecolor="#EAECF0"),
+            yaxis=dict(gridcolor="#F2F4F7", linecolor="#EAECF0"),
+        )
+        fig_bar.update_traces(marker_line_width=0)
+        st.plotly_chart(fig_bar, use_container_width=True)
+
+# Donut chart
+with chart_col2:
+    if "Status" in df.columns:
         status_counts = df["Status"].value_counts().reset_index()
         status_counts.columns = ["Status", "Count"]
-        fig = px.pie(
-            status_counts, values="Count", names="Status",
-            color_discrete_sequence=COLORS,
-            title="Status Distribution",
-            hole=0.55
+        fig_pie = px.pie(
+            status_counts, names="Status", values="Count",
+            hole=0.6,
+            color="Status",
+            color_discrete_map={
+                "Completed": "#17B26A",
+                "Pending":   "#F79009",
+                "Cancelled": "#F04438",
+            },
+            template="plotly_white",
         )
-        fig.update_layout(**PLOTLY_LAYOUT)
-        st.plotly_chart(fig, use_container_width=True)
-
-with chart_col2:
-    if has_amount and has_date:
-        df_time = df.copy()
-        df_time["Date"] = pd.to_datetime(df_time["Date"], errors="coerce")
-        df_time = df_time.dropna(subset=["Date"])
-        df_time["Amount_num"] = pd.to_numeric(df_time["Amount"], errors="coerce")
-        df_agg = df_time.groupby("Date")["Amount_num"].sum().reset_index()
-        fig2 = px.area(
-            df_agg, x="Date", y="Amount_num",
-            title="Amount Over Time",
-            color_discrete_sequence=["#3B82F6"]
+        fig_pie.update_traces(
+            textposition="outside",
+            textinfo="label+percent",
+            textfont_size=12,
+            marker=dict(line=dict(color="#FFFFFF", width=2)),
         )
-        fig2.update_traces(line_color="#3B82F6", fillcolor="rgba(59,130,246,0.15)")
-        fig2.update_layout(**PLOTLY_LAYOUT)
-        st.plotly_chart(fig2, use_container_width=True)
-
-    elif has_amount and has_status:
-        df["Amount_num"] = pd.to_numeric(df["Amount"], errors="coerce")
-        fig2 = px.box(
-            df, x="Status", y="Amount_num",
-            color="Status", color_discrete_sequence=COLORS,
-            title="Amount Distribution by Status"
+        fig_pie.update_layout(
+            title=dict(text="Status Breakdown", font=dict(size=14, color="#101828"), x=0),
+            showlegend=False,
+            margin=dict(l=20, r=20, t=40, b=20),
+            paper_bgcolor="white",
         )
-        fig2.update_layout(**PLOTLY_LAYOUT, showlegend=False)
-        st.plotly_chart(fig2, use_container_width=True)
+        st.plotly_chart(fig_pie, use_container_width=True)
 
-# ── FULL TABLE ────────────────────────────
-st.markdown("## Records")
+# Line chart
+if "Amount" in df.columns and "Date" in df.columns:
+    df_copy = df.copy()
+    df_copy["Date"] = pd.to_datetime(df_copy["Date"], errors="coerce")
+    df_date = df_copy.dropna(subset=["Date"]).groupby("Date")["Amount"].sum().reset_index()
+    if not df_date.empty:
+        fig_line = px.line(
+            df_date, x="Date", y="Amount",
+            template="plotly_white",
+            color_discrete_sequence=["#2E90FA"],
+        )
+        fig_line.update_traces(line=dict(width=2.5), mode="lines+markers", marker=dict(size=5))
+        fig_line.update_layout(
+            title=dict(text="Amount Over Time", font=dict(size=14, color="#101828"), x=0),
+            margin=dict(l=0, r=0, t=40, b=0),
+            plot_bgcolor="white",
+            paper_bgcolor="white",
+            font=dict(family="sans-serif", color="#667085"),
+            xaxis=dict(showgrid=False, linecolor="#EAECF0"),
+            yaxis=dict(gridcolor="#F2F4F7", linecolor="#EAECF0"),
+        )
+        st.plotly_chart(fig_line, use_container_width=True)
 
-search = st.text_input("Search records", placeholder="Type to filter any column...")
-display_df = df.copy()
-if search:
-    mask = display_df.apply(
-        lambda col: col.astype(str).str.contains(search, case=False, na=False)
-    ).any(axis=1)
-    display_df = display_df[mask]
 
-st.caption(f"Showing {len(display_df):,} of {len(df):,} records")
-st.dataframe(display_df, use_container_width=True, height=420)
+# ---------------------------
+# Record Cards
+# ---------------------------
+st.markdown('<div class="section-header">Records</div>', unsafe_allow_html=True)
 
-# ── DOWNLOAD ──────────────────────────────
-st.markdown("## Export")
-csv = display_df.to_csv(index=False).encode("utf-8")
-st.download_button(
-    label="Download CSV",
-    data=csv,
-    file_name="dashboard_export.csv",
-    mime="text/csv"
+records = df.to_dict("records")
+cols_per_row = 3
+for i in range(0, len(records), cols_per_row):
+    row_slice = records[i: i + cols_per_row]
+    cols = st.columns(cols_per_row)
+    for j, (col, record) in enumerate(zip(cols, row_slice)):
+        with col:
+            st.markdown(record_card_html(record, i + j), unsafe_allow_html=True)
+
+
+# ---------------------------
+# Full Data Table
+# ---------------------------
+st.markdown('<div class="section-header">Data Table</div>', unsafe_allow_html=True)
+st.dataframe(
+    df,
+    use_container_width=True,
+    hide_index=True,
+    height=min(400, 80 + len(df) * 35),
 )
