@@ -20,7 +20,7 @@ if service_file:
         # Add correct Google API scopes
         scopes = [
             "https://www.googleapis.com/auth/spreadsheets",
-            "https://www.googleapis.com/auth/drive.readonly"  # optional if only reading
+            "https://www.googleapis.com/auth/drive.readonly"
         ]
 
         # Create credentials with scopes
@@ -65,28 +65,28 @@ if service_file:
         col1, col2, col3, col4 = st.columns(4)
 
         with col1:
-            card(title="Total Rows", text=f"{len(df)}", width=250)
+            card(title="Total Rows", text=f"{len(df)}")
 
         with col2:
             if "Amount" in df.columns:
                 total_amount = df["Amount"].sum()
-                card(title="Total Amount", text=f"${total_amount:,.2f}", width=250)
+                card(title="Total Amount", text=f"${total_amount:,.2f}")
             else:
-                card(title="Total Amount", text="N/A", width=250)
+                card(title="Total Amount", text="N/A")
 
         with col3:
             if "Status" in df.columns:
                 completed = df[df["Status"].str.lower() == "completed"].shape[0]
-                card(title="Completed", text=f"{completed}", width=250)
+                card(title="Completed", text=f"{completed}")
             else:
-                card(title="Completed", text="N/A", width=250)
+                card(title="Completed", text="N/A")
 
         with col4:
             if "Amount" in df.columns:
                 avg_amount = df["Amount"].mean()
-                card(title="Average Amount", text=f"${avg_amount:,.2f}", width=250)
+                card(title="Average Amount", text=f"${avg_amount:,.2f}")
             else:
-                card(title="Average Amount", text="N/A", width=250)
+                card(title="Average Amount", text="N/A")
 
         # ---------------------------
         # Dynamic Row Cards
@@ -95,8 +95,7 @@ if service_file:
         for index, row in df.iterrows():
             card(
                 title=f"Record {index+1}: {row.get('Name', 'No Name')}",
-                text="\n".join([f"{k}: {v}" for k, v in row.items()]),
-                width=400
+                text="\n".join([f"{k}: {v}" for k, v in row.items()])
             )
 
         # ---------------------------
