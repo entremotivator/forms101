@@ -5,7 +5,7 @@ from datetime import datetime
 # -------------------------
 # CONFIG
 # -------------------------
-WEBHOOK_URL = "https://agentonline-u29564.vm.elestio.app/webhook-test/b0b99781-cab8-4967-b87e-88cbbc87b8ba"
+WEBHOOK_URL = "https://agentonline-u29564.vm.elestio.app/webhook/b0b99781-cab8-4967-b87e-88cbbc87b8ba"
 
 st.set_page_config(page_title="Cleaning Booking System", layout="wide")
 
